@@ -5,13 +5,13 @@ import datetime
 
 def main():
     # Define the folder to save captured images
-    output_folder = "captured_images"
+    output_folder = "test_images"
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
         print(f"Created folder: {output_folder}")
 
     # Open the default camera (index 0)
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     if not cap.isOpened():
         print("Error: Could not open camera.")
         return
