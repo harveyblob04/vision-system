@@ -28,8 +28,7 @@ def get_new_filename(original_path):
         image_counter += 1
         new_filename = f"image_{image_counter}{ext_lower}"
     elif ext_lower == ".txt":
-        text_counter += 1
-        new_filename = f"coords_{text_counter}.txt"
+        new_filename = f"coords_{image_counter}.txt"
     else:
         # For other file types, keep the original file name
         new_filename = original_name
@@ -148,7 +147,7 @@ def process_image(filepath):
 
 if __name__ == "__main__":
     # Set the folder path to be watched (using an absolute path)
-    folder_to_watch = r"C:\Users\harve\PycharmProjects\PythonProject\copied_images"
+    folder_to_watch = os.path.join(os.getcwd(), "copied_images")
 
     # Verify the folder exists
     if not os.path.exists(folder_to_watch):
