@@ -5,7 +5,6 @@ import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-
 # Define a handler for new files in the folder
 class ImageHandler(FileSystemEventHandler):
     def on_created(self, event):
@@ -15,7 +14,6 @@ class ImageHandler(FileSystemEventHandler):
             # Add a small delay to ensure the file is fully written
             time.sleep(0.5)
             process_image(event.src_path)
-
 
 def process_image(filepath):
     # Check if file exists and is readable
@@ -28,7 +26,7 @@ def process_image(filepath):
         return
 
     try:
-        # Print file size and last modified time for debugging
+        # Debug: File size and modification time
         file_size = os.path.getsize(filepath)
         file_time = os.path.getmtime(filepath)
         print(f"File size: {file_size} bytes")
@@ -38,67 +36,77 @@ def process_image(filepath):
         print(f"Attempting to read image: {filepath}")
         image = cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
 
-
         if image is None:
             print(f"Error: OpenCV failed to read image {filepath}")
             return
 
         print(f"Successfully read image. Shape: {image.shape}")
 
-        # Thresholding
+        # Thresholding to create a binary image
         ret, thresh = cv2.threshold(image, 50, 255, cv2.THRESH_BINARY_INV)
 
-        # Zero out the border pixels to prevent detecting the image edge as a contour
+        # Zero out the border pixels to prevent edge detection on the image border
         thresh[0, :] = 0
         thresh[-1, :] = 0
         thresh[:, 0] = 0
         thresh[:, -1] = 0
 
-        # Now find external contours in the modified thresholded image
+        # Find external contours
         contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        edged = cv2.Canny(image, 30, 200)
 
+        # Display the edged image for debugging
+        edged = cv2.Canny(image, 30, 200)
         cv2.imshow('edged', edged)
         cv2.waitKey(0)
 
-        cv2.drawContours(image, contours, -1, (0, 255, 0), 3)
-        cv2.imshow('contours', image)
+        # Convert grayscale image to BGR so we can draw colored contours and centers
+        image_color = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+        rectangle_centers = []
+
+        # Process each contour to check if it is a rectangle and compute its center
+        for cnt in contours:
+            # Approximate contour to polygon
+            epsilon = 0.02 * cv2.arcLength(cnt, True)
+            approx = cv2.approxPolyDP(cnt, epsilon, True)
+
+            # If the polygon has 4 vertices, consider it as a rectangle
+            if len(approx) == 4:
+                M = cv2.moments(cnt)
+                if M["m00"] == 0:
+                    continue
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
+                rectangle_centers.append((cX, cY))
+                # Draw the rectangle and its center on the image
+                cv2.drawContours(image_color, [cnt], -1, (0, 255, 0), 3)
+                cv2.circle(image_color, (cX, cY), 5, (0, 0, 255), -1)
+
+        cv2.imshow('rectangles', image_color)
         cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
-
-        print(contours)
-        print(hierarchy)
-        if not contours:
-            print(f"No contours found in {filepath}")
+        if not rectangle_centers:
+            print(f"No rectangles found in {filepath}")
             return
 
-        # Assume the largest contour corresponds to the sheet
-        largest_contour = max(contours, key=cv2.contourArea)
+        print("Detected rectangle centers:", rectangle_centers)
 
-        # Calculate moments of the largest contour to find the center
-        M = cv2.moments(largest_contour)
-        if M["m00"] == 0:
-            print(f"Contour area is zero for {filepath}")
-            return
-        cX = int(M["m10"] / M["m00"])
-        cY = int(M["m01"] / M["m00"])
-        print(f"Center of sheet in {filepath}: ({cX}, {cY})")
-
-        # Create a text file to save the coordinates with a new naming convention
+        # Create a text file to save the coordinates.
+        # The file naming convention uses the first part of the original file name.
         base_name = os.path.basename(filepath)
         number = base_name.split('_')[0]  # Gets the number before the first underscore
         txt_filename = os.path.join(os.path.dirname(filepath), f"{number}_coords.txt")
 
         with open(txt_filename, "w") as f:
-            f.write(f"{cX}, {cY}")
+            for center in rectangle_centers:
+                f.write(f"{center[0]}, {center[1]}\n")
         print(f"Coordinates saved to {txt_filename}")
 
     except Exception as e:
         print(f"Error processing {filepath}: {str(e)}")
 
-
 if __name__ == "__main__":
-    # Set the folder path to be watched with absolute path
+    # Set the folder path to be watched (using an absolute path)
     folder_to_watch = r"C:\Users\harve\PycharmProjects\PythonProject\copied_images"
 
     # Verify the folder exists
