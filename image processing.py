@@ -83,8 +83,14 @@ def process_image(filepath):
 
         print(f"Successfully read image. Shape: {image.shape}")
 
-        # Thresholding to create a binary image
+        # Thresholding to create a binary image (black and white)
         ret, thresh = cv2.threshold(image, 50, 255, cv2.THRESH_BINARY_INV)
+
+        # Save the thresholded (black and white) image copy
+        base_name, ext = os.path.splitext(os.path.basename(filepath))
+        bw_filename = os.path.join(os.path.dirname(filepath), f"{base_name}_bw{ext}")
+        cv2.imwrite(bw_filename, thresh)
+        print(f"Black and white image saved as {bw_filename}")
 
         # Zero out the border pixels to prevent edge detection on the image border
         thresh[0, :] = 0
@@ -133,8 +139,7 @@ def process_image(filepath):
         print("Detected rectangle centers:", rectangle_centers)
 
         # Save the coordinates to a text file based on the image file name
-        base_name = os.path.basename(filepath)
-        name_without_ext = os.path.splitext(base_name)[0]
+        name_without_ext = os.path.splitext(os.path.basename(filepath))[0]
         txt_filename = os.path.join(os.path.dirname(filepath), f"{name_without_ext}_coords.txt")
 
         with open(txt_filename, "w") as f:

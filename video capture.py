@@ -11,7 +11,7 @@ def main():
         print(f"Created folder: {output_folder}")
 
     # Open the default camera (index 0)
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         print("Error: Could not open camera.")
         return
